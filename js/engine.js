@@ -346,6 +346,20 @@ export class GameEngine {
 
     if (this.countdownTimer > 0) {
       this.countdownTimer = Math.max(0, this.countdownTimer - clampedDt);
+      for (const p of this.players) {
+        if (p.input.emote) {
+          p.emote = p.input.emote;
+          p.emoteTimer = 2.2;
+        }
+        if (p.emoteTimer > 0) {
+          p.emoteTimer = Math.max(0, p.emoteTimer - clampedDt);
+          if (p.emoteTimer === 0) p.emote = null;
+        }
+        p.input.dash = false;
+        p.input.useItem = false;
+        p.input.swapSlot = false;
+        p.input.emote = null;
+      }
       const ceilVal = Math.ceil(this.countdownTimer - 0.35);
       if (this.isHost && ceilVal !== this._lastCdTick && ceilVal >= 0) {
         this._lastCdTick = ceilVal;

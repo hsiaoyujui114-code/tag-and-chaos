@@ -176,7 +176,14 @@
 
         <div class="editor-layout">
           <div>
-            <label class="field-label" style="margin-top:0">地圖名稱</label>
+            <label class="field-label" style="margin-top:0">載入地圖範本編輯</label>
+            <select id="ed-template">
+              <option value="blank">⬜ 空白地圖</option>
+              <option value="office">🏢 辦公室／校園大迷宮</option>
+              <option value="ice">🧊 極限滑冰場</option>
+              <option value="factory">🏭 輸送帶工廠</option>
+            </select>
+            <label class="field-label">地圖名稱</label>
             <input id="ed-name" type="text" value="我的像素大迷宮" maxlength="24" />
             <label class="field-label">視覺主題</label>
             <select id="ed-theme">
@@ -232,6 +239,7 @@
     </div>
 
     <div id="hud-banner" class="hud-banner hidden"></div>
+    <div id="hud-effects" class="hud-effects"></div>
 
     <!-- Spectator Chaos Skill Bar -->
     <div id="spec-bar" class="spec-bar hidden">
@@ -257,7 +265,7 @@
           <div style="font-size:0.72rem; color:#94a3b8">按 Q 切換</div>
         </div>
       </div>
-      <button id="btn-hud-dash" class="action-cd-btn">⚡ Shift 衝刺<br><span id="hud-dash-cd" style="color:#4ade80">就緒</span></button>
+      <button id="btn-hud-dash" class="action-cd-btn"><span id="hud-dash-label">⚡ Shift 衝刺</span><br><span id="hud-dash-cd" style="color:#4ade80">就緒</span></button>
       <div class="emote-bar">
         <button class="emote-btn" data-emote="😂">😂</button>
         <button class="emote-btn" data-emote="😱">😱</button>

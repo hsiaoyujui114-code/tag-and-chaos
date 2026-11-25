@@ -116,6 +116,11 @@ export class GameRenderer {
     ctx.imageSmoothingEnabled = false;
     const local = engine.players.find((p) => p.id === engine.localId) || engine.players[0];
 
+    // Spectators zoom out wider to aim chaos drops; active players stay tightly zoomed on local neighborhood
+    const baseZoom = Math.max(1.25, Math.min(1.8, Math.min(this.viewW / 580, this.viewH / 440)));
+    const targetZoom = local && local.caught ? Math.max(0.55, Math.min(0.88, Math.min(this.viewW / 1200, this.viewH / 880))) : baseZoom;
+    this.zoom += (targetZoom - this.zoom) * Math.min(1, dt * 6);
+
     let targetX = WORLD_W / 2;
     let targetY = WORLD_H / 2;
     if (local) {
@@ -355,10 +360,19 @@ export class GameRenderer {
       }
       for (const k of engine.keys) {
         const bob = Math.floor(Math.sin(this.time * 5 + k.x) * 3);
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(k.x - 9, k.y - 6 + bob, 18, 9);
+        const kx = Math.round(k.x);
+        const ky = Math.round(k.y + bob);
+        // Pixel Golden Key
         ctx.fillStyle = '#090d16';
-        ctx.fillRect(k.x - 6, k.y - 3 + bob, 4, 4);
+        ctx.fillRect(kx - 11, ky - 6, 10, 10);
+        ctx.fillRect(kx - 1, ky - 3, 13, 5);
+        ctx.fillRect(kx + 6, ky + 1, 5, 5);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(kx - 9, ky - 4, 6, 6);
+        ctx.fillRect(kx - 3, ky - 1, 13, 2);
+        ctx.fillRect(kx + 8, ky + 1, 2, 3);
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(kx - 7, ky - 2, 2, 2);
       }
     }
   }
@@ -374,14 +388,48 @@ export class GameRenderer {
         ctx.fillRect(tr.x - tr.radius * 0.5, tr.y - tr.radius * 0.5, tr.radius, tr.radius);
       } else {
         if (tr.type === 'freeze_mine' && local && tr.ownerId !== local.id && !local.caught) {
-          ctx.globalAlpha = 0.4;
+          ctx.globalAlpha = 0.42;
         }
-        ctx.fillStyle = '#090d16';
-        ctx.fillRect(tr.x - 12, tr.y - 12, 24, 24);
-        ctx.fillStyle = tr.type === 'banana' ? '#facc15' : tr.type === 'freeze_mine' ? '#7dd3fc' : tr.type === 'bear_trap' ? '#94a3b8' : '#fb923c';
-        ctx.fillRect(tr.x - 9, tr.y - 9, 18, 18);
-        ctx.fillStyle = '#090d16';
-        ctx.fillRect(tr.x - 3, tr.y - 3, 6, 6);
+        const tx = Math.round(tr.x);
+        const ty = Math.round(tr.y);
+        if (tr.type === 'banana') {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(tx - 9, ty - 6, 18, 12);
+          ctx.fillStyle = '#facc15';
+          ctx.fillRect(tx - 6, ty - 3, 12, 6);
+          ctx.fillRect(tx - 9, ty, 6, 3);
+          ctx.fillRect(tx + 3, ty, 6, 3);
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(tx - 3, ty - 6, 4, 3);
+        } else if (tr.type === 'freeze_mine') {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(tx - 10, ty - 10, 20, 20);
+          ctx.fillStyle = '#0284c7';
+          ctx.fillRect(tx - 8, ty - 8, 16, 16);
+          ctx.fillStyle = '#e0f2fe';
+          ctx.fillRect(tx - 2, ty - 7, 4, 14);
+          ctx.fillRect(tx - 7, ty - 2, 14, 4);
+        } else if (tr.type === 'bear_trap') {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(tx - 12, ty - 9, 24, 18);
+          ctx.fillStyle = '#64748b';
+          ctx.fillRect(tx - 9, ty - 6, 18, 12);
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(tx - 7, ty - 6, 3, 4);
+          ctx.fillRect(tx + 4, ty - 6, 3, 4);
+          ctx.fillRect(tx - 7, ty + 2, 3, 4);
+          ctx.fillRect(tx + 4, ty + 2, 3, 4);
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(tx - 2, ty - 2, 4, 4);
+        } else {
+          // Bounce mine with blinking pixel LED
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(tx - 11, ty - 11, 22, 22);
+          ctx.fillStyle = '#ea580c';
+          ctx.fillRect(tx - 8, ty - 8, 16, 16);
+          ctx.fillStyle = Math.floor(this.time * 8) % 2 === 0 ? '#fef08a' : '#ef4444';
+          ctx.fillRect(tx - 3, ty - 3, 6, 6);
+        }
       }
       ctx.restore();
     }

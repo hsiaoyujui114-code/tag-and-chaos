@@ -10,6 +10,7 @@ import { P2PManager } from './net.js';
 import { audio } from './audio.js';
 
 // App State (Pure character only — no hats or wearable accessories)
+const PROFILE_STORAGE_KEY = 'tagchaos_profile_v1';
 const profile = {
   id: 'p-' + Math.random().toString(36).slice(2, 8),
   name: '像素玩家',
@@ -20,6 +21,35 @@ const profile = {
   perk: 'parkour',
   ready: true,
 };
+
+function loadSavedProfile() {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.name) profile.name = String(saved.name).slice(0, 12);
+    if (saved.color && COLORS.some((c) => c.hex === saved.color)) {
+      const c = COLORS.find((x) => x.hex === saved.color);
+      profile.color = c.hex;
+      profile.colorDark = c.dark;
+    }
+    if (saved.perk && PERKS.some((p) => p.id === saved.perk)) {
+      profile.perk = saved.perk;
+    }
+  } catch {}
+}
+
+function saveProfile() {
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({
+      name: profile.name,
+      color: profile.color,
+      perk: profile.perk,
+    }));
+  } catch {}
+}
+
+loadSavedProfile();
 
 let customMap = null;
 let lobbyMode = 'single'; // 'single' | 'host' | 'client'
@@ -53,6 +83,7 @@ function showScreen(name) {
 // 1. HOME & CHARACTER SELECTION (NO HATS / NO TRAILS)
 // ============================================================
 function initHomeUI() {
+  $('inp-name').value = profile.name;
   const swWrap = $('color-swatches');
   COLORS.forEach((c) => {
     const btn = document.createElement('button');
@@ -64,6 +95,7 @@ function initHomeUI() {
       profile.colorDark = c.dark;
       swWrap.querySelectorAll('.swatch').forEach((x) => x.classList.remove('active'));
       btn.classList.add('active');
+      saveProfile();
       drawAvatarPreview();
     };
     swWrap.appendChild(btn);
@@ -82,6 +114,7 @@ function initHomeUI() {
       profile.perk = pk.id;
       pkWrap.querySelectorAll('.pill').forEach((x) => x.classList.remove('active'));
       btn.classList.add('active');
+      saveProfile();
       updatePerkDesc();
     };
     pkWrap.appendChild(btn);
@@ -90,6 +123,7 @@ function initHomeUI() {
 
   $('inp-name').oninput = (e) => {
     profile.name = e.target.value.trim() || '像素玩家';
+    saveProfile();
   };
 
   drawAvatarPreview();
@@ -356,6 +390,9 @@ p2p.onLobbyUpdate = (ev) => {
     for (const pr of ev.state.peers) lobbyPeers.set(pr.id, pr);
     const st = ev.state.settings;
     $('sel-mode').value = st.mode;
+    if (st.mapId && [...$('sel-map').options].some((o) => o.value === st.mapId)) {
+      $('sel-map').value = st.mapId;
+    }
     $('sel-duration').value = String(st.duration);
     $('sel-ai-count').value = String(st.aiCount);
     $('sel-ai-diff').value = st.aiDiff;
@@ -422,6 +459,23 @@ let selectedTile = TILE.WALL;
 let editorDrawing = false;
 
 function initEditor() {
+  $('ed-template').onchange = () => {
+    const val = $('ed-template').value;
+    if (val === 'blank') {
+      editorMap = createBlankCustomMap();
+    } else {
+      const found = BUILTIN_MAPS.find((m) => m.id === val);
+      if (found) {
+        editorMap = cloneMap(found);
+        editorMap.id = 'custom';
+      }
+    }
+    $('ed-name').value = editorMap.name;
+    $('ed-theme').value = editorMap.theme;
+    $('ed-gates').checked = !!editorMap.periodicGates;
+    drawEditorCanvas();
+  };
+
   const pal = $('ed-palette');
   if (pal.children.length === 0) {
     TILE_META.forEach((tm) => {
@@ -570,6 +624,7 @@ function startGameSession(config, isHost) {
   window.onresize = handleResize;
 
   $('mobile-controls').classList.toggle('hidden', !forceTouchUI);
+  document.body.classList.toggle('touch-active', forceTouchUI);
   showScreen('game');
 
   lastTs = performance.now();
@@ -681,9 +736,28 @@ function updateGameHUD(dt) {
 
   if (!local) return;
 
-  $('hud-role-badge').textContent = local.caught ? '👻 觀戰搞事中'
+  const roleBadge = $('hud-role-badge');
+  roleBadge.className = local.caught ? 'role-spec' : local.role === 'chaser' ? 'role-chaser' : 'role-runner';
+  roleBadge.textContent = local.caught ? '👻 觀戰搞事中'
     : local.caged ? '⛓️ 牢籠待援'
     : local.role === 'chaser' ? '👹 追逐者' : '🏃 逃跑者';
+
+  // Active buffs / debuffs tags
+  const effs = [];
+  if (local.shieldActive) effs.push('🛡️ 護盾');
+  if (local.speedBoostTimer > 0 || local.megaphoneBoostTimer > 0) effs.push('⚡ 加速');
+  if (local.cloakTimer > 0) effs.push('👻 隱身');
+  if (local.radarTimer > 0) effs.push('📡 雷達');
+  if (local.pogoTimer > 0) effs.push('🦘 跳躍');
+  if (local.disguiseTimer > 0) effs.push('📦 偽裝');
+  if (local.confuseTimer > 0) effs.push('😵 方向顛倒');
+  if (local.freezeTimer > 0 || local.trapTimer > 0) effs.push('❄️ 定身中');
+  if (local.slipTimer > 0) effs.push('🍌 打滑中');
+  const effHtml = effs.map((e) => `<span class="effect-tag">${e}</span>`).join('');
+  if ($('hud-effects').innerHTML !== effHtml) $('hud-effects').innerHTML = effHtml;
+
+  const dashLabel = local.role === 'chaser' ? '👹 Shift 猛撲' : '⚡ Shift 衝刺';
+  if ($('hud-dash-label').textContent !== dashLabel) $('hud-dash-label').textContent = dashLabel;
 
   if (local.role === 'runner' && !local.caught && !local.caged && engine.countdownTimer <= 0) {
     let minD = Infinity;
@@ -717,8 +791,11 @@ function updateGameHUD(dt) {
     $('slot-1').classList.toggle('active', local.activeSlot === 1);
   }
 
-  $('hud-dash-cd').textContent = local.dashCooldown > 0 ? `${local.dashCooldown.toFixed(1)}s` : '就緒!';
-  $('hud-dash-cd').style.color = local.dashCooldown > 0 ? '#f87171' : '#4ade80';
+  const cdVal = $('hud-dash-cd');
+  if (cdVal) {
+    cdVal.textContent = local.dashCooldown > 0 ? `${local.dashCooldown.toFixed(1)}s` : '就緒!';
+    cdVal.style.color = local.dashCooldown > 0 ? '#f87171' : '#4ade80';
+  }
 
   $('spec-bar').classList.toggle('hidden', !local.caught);
   if (local.caught) {
@@ -817,6 +894,7 @@ $('btn-spec-smoke').onclick = () => { specSkillMode = 'smoke'; };
 $('btn-toggle-touch').onclick = () => {
   forceTouchUI = !forceTouchUI;
   $('mobile-controls').classList.toggle('hidden', !forceTouchUI);
+  document.body.classList.toggle('touch-active', forceTouchUI);
 };
 $('btn-mute').onclick = () => {
   audio.setMuted(!audio.muted);

@@ -534,6 +534,58 @@ input:focus, select:focus, textarea:focus {
   pointer-events: auto;
 }
 
+.hud-effects {
+  position: absolute;
+  bottom: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.effect-tag {
+  background: rgba(9, 13, 22, 0.92);
+  border: 2px solid var(--accent-2);
+  color: #f8fafc;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.role-chaser { color: #fca5a5; }
+.role-runner { color: #86efac; }
+.role-spec { color: #d8b4fe; }
+
+body.touch-active .hud-bottom {
+  bottom: 16px;
+  left: 50%;
+  gap: 6px;
+}
+
+body.touch-active #btn-hud-dash {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .hud-bottom {
+    bottom: 158px;
+    gap: 6px;
+  }
+  .hud-effects {
+    bottom: 222px;
+  }
+  .item-slot {
+    min-width: 112px;
+    padding: 6px 8px;
+  }
+  .emote-bar {
+    display: none;
+  }
+}
+
 .item-slot {
   background: rgba(9, 13, 22, 0.94);
   border: 3px solid #475569;
