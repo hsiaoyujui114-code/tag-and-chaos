@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>《代號：極限追逐》Tag & Chaos — Q版派對追逐遊戲</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- PeerJS for zero-server WebRTC P2P multiplayer on GitHub Pages -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
+</head>
+<body>
+
+  <!-- 1. HOME SCREEN -->
+  <section id="screen-home" class="screen">
+    <div class="container">
+      <div class="hero-header">
+        <h1 class="hero-title">🏃‍♂️💨 《代號：極限追逐》 Tag &amp; Chaos</h1>
+        <p class="hero-sub">2D Q版幾何派對追逐｜22種爆笑道具 × 5大職業天賦 × 5種遊戲模式 × WebRTC 免伺服器 P2P 連線</p>
+      </div>
+
+      <div class="grid-2">
+        <!-- Left: Character & Perk Customization -->
+        <div class="card">
+          <h2>🎨 角色造型與天賦</h2>
+          <div class="avatar-preview-wrap">
+            <canvas id="avatar-preview" width="76" height="76"></canvas>
+            <div style="flex:1">
+              <label class="field-label" style="margin-top:0">玩家暱稱</label>
+              <input id="inp-name" type="text" maxlength="12" value="極限玩家" placeholder="輸入你的暱稱" />
+            </div>
+          </div>
+
+          <label class="field-label">角色顏色</label>
+          <div id="color-swatches" class="swatch-row"></div>
+
+          <label class="field-label">可愛頭飾</label>
+          <div id="hat-pills" class="pill-row"></div>
+
+          <label class="field-label">移動殘影</label>
+          <div id="trail-pills" class="pill-row"></div>
+
+          <label class="field-label">選擇職業天賦 (開局被動)</label>
+          <div id="perk-pills" class="pill-row"></div>
+          <div id="perk-desc" class="perk-desc-box"></div>
+        </div>
+
+        <!-- Right: Play Modes & P2P Entry -->
+        <div class="card action-stack">
+          <h2>🎮 開始遊玩</h2>
+          <button id="btn-single" class="btn btn-lg">🤖 單人模式 vs 電腦 AI</button>
+          <button id="btn-host" class="btn btn-blue btn-lg">🌐 建立 P2P 多人房間（免伺服器）</button>
+
+          <label class="field-label" style="margin-top:4px">🔗 輸入房號加入朋友房間</label>
+          <div class="join-row">
+            <input id="inp-room" type="text" placeholder="例如 TAG-4829" />
+            <button id="btn-join" class="btn btn-green" style="white-space:nowrap">加入房間</button>
+          </div>
+
+          <div style="display:flex; gap:10px; margin-top:6px">
+            <button id="btn-editor" class="btn btn-purple" style="flex:1">🛠 地圖編輯器</button>
+            <button id="btn-codex" class="btn btn-dark" style="flex:1">🎁 道具與規則圖鑑</button>
+          </div>
+
+          <div style="margin-top:8px; font-size:0.84rem; color:#94a3b8; line-height:1.55;">
+            <b>操作說明：</b><br>
+            • 移動：<kbd>WASD</kbd> 或 <kbd>方向鍵</kbd>（手機支援左下虛擬搖桿）<br>
+            • 使用道具：<kbd>空白鍵</kbd> 或 <kbd>滑鼠左鍵</kbd>（道具狂按 <kbd>Q</kbd> 切換）<br>
+            • 專屬衝刺／猛撲：<kbd>Shift</kbd>（冷卻 5 秒）｜表情：<kbd>1~4</kbd>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. LOBBY / MATCH SETUP SCREEN -->
+  <section id="screen-lobby" class="screen hidden">
+    <div class="container">
+      <div class="card">
+        <div class="lobby-top">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button id="btn-lobby-back" class="btn btn-dark btn-sm">← 返回大廳</button>
+            <h2 id="lobby-title" style="margin:0">🎮 單人對戰設定</h2>
+            <span id="room-badge" class="room-badge hidden">
+              房號：<span id="room-code-txt">TAG-0000</span>
+              <button id="btn-copy-link" class="btn btn-sm btn-blue">📋 複製邀請連結</button>
+            </span>
+          </div>
+          <div id="net-status" style="font-size:0.86rem; color:#38bdf8; font-weight:700;"></div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Match Rules -->
+          <div>
+            <label class="field-label" style="margin-top:0">遊戲模式 (5 種玩法)</label>
+            <select id="sel-mode"></select>
+            <div id="mode-desc" class="perk-desc-box" style="margin-bottom:8px"></div>
+
+            <label class="field-label">選擇地圖</label>
+            <select id="sel-map"></select>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div>
+                <label class="field-label">單局時間</label>
+                <select id="sel-duration">
+                  <option value="60">60 秒（快節奏）</option>
+                  <option value="90" selected>90 秒（標準）</option>
+                  <option value="120">120 秒（持久戰）</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">我的陣營</label>
+                <select id="sel-myrole">
+                  <option value="auto">🎲 隨機分配</option>
+                  <option value="runner" selected>🏃 逃跑者</option>
+                  <option value="chaser">👹 追逐者（鬼）</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div>
+                <label class="field-label">電腦 AI 數量</label>
+                <select id="sel-ai-count">
+                  <option value="0">0（純玩家）</option>
+                  <option value="3">3 位 AI</option>
+                  <option value="5" selected>5 位 AI</option>
+                  <option value="7">7 位 AI（大亂鬥）</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">AI 電腦難度</label>
+                <select id="sel-ai-diff">
+                  <option value="easy">🌱 簡單</option>
+                  <option value="normal" selected>⚔️ 普通</option>
+                  <option value="hell">🔥 地獄（預判走位）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="toggle-grid">
+              <label class="toggle-item"><input id="chk-fog" type="checkbox" checked /> 🔦 視野迷霧</label>
+              <label class="toggle-item"><input id="chk-events" type="checkbox" checked /> ⚡ 全場突發事件</label>
+              <label class="toggle-item"><input id="chk-poison" type="checkbox" checked /> ☠️ 最後30秒毒圈</label>
+              <label class="toggle-item"><input id="chk-rubber" type="checkbox" checked /> 🎁 橡皮筋道具</label>
+            </div>
+          </div>
+
+          <!-- Participants Roster -->
+          <div style="display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <h3>👥 參賽名單</h3>
+              <div id="lobby-players" class="player-list"></div>
+            </div>
+
+            <div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">
+              <button id="btn-start-match" class="btn btn-green btn-lg">🚀 立即開戰！</button>
+              <div id="wait-host-msg" class="hidden" style="text-align:center; color:#fde047; font-weight:700;">⏳ 等待房主開始遊戲...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. MAP EDITOR SCREEN -->
+  <section id="screen-editor" class="screen hidden">
+    <div class="container">
+      <div class="card">
+        <div class="lobby-top">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button id="btn-ed-back" class="btn btn-dark btn-sm">← 返回</button>
+            <h2 style="margin:0">🛠 簡易地圖編輯器</h2>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btn-ed-clear" class="btn btn-dark btn-sm">🧹 清空地板</button>
+            <button id="btn-ed-export" class="btn btn-blue btn-sm">📤 匯出地圖代碼</button>
+            <button id="btn-ed-import" class="btn btn-purple btn-sm">📥 匯入代碼</button>
+            <button id="btn-ed-apply" class="btn btn-green btn-sm">✅ 套用並試玩</button>
+          </div>
+        </div>
+
+        <div class="editor-layout">
+          <div>
+            <label class="field-label" style="margin-top:0">地圖名稱</label>
+            <input id="ed-name" type="text" value="我的自訂迷宮" maxlength="24" />
+            <label class="field-label">視覺主題</label>
+            <select id="ed-theme">
+              <option value="office">🏢 辦公室／校園</option>
+              <option value="ice">🧊 滑冰場</option>
+              <option value="factory">🏭 輸送帶工廠</option>
+            </select>
+            <label class="toggle-item" style="margin-top:8px">
+              <input id="ed-gates" type="checkbox" /> 🚪 電動閘門定時自動開關
+            </label>
+            <label class="field-label">點擊或拖曳塗鴉磚塊（右鍵擦除）</label>
+            <div id="ed-palette" class="tile-palette"></div>
+          </div>
+          <div>
+            <canvas id="editor-canvas" width="896" height="640"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. IN-GAME SCREEN -->
+  <section id="screen-game" class="screen hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top HUD -->
+    <div class="hud-top">
+      <div class="hud-pill">
+        <span id="hud-role-badge">🏃 逃跑者</span>
+        <span id="hud-alive-txt">存活 5/5</span>
+        <span id="hud-mode-extra"></span>
+      </div>
+
+      <div id="hud-timer" class="hud-pill timer-box">01:30</div>
+
+      <div style="display:flex; gap:6px;">
+        <button id="btn-toggle-touch" class="btn btn-dark btn-sm" title="切換觸控搖桿">📱</button>
+        <button id="btn-mute" class="btn btn-dark btn-sm" title="音效開關">🔊</button>
+        <button id="btn-quit-game" class="btn btn-red btn-sm">離開</button>
+      </div>
+    </div>
+
+    <div id="hud-banner" class="hud-banner hidden"></div>
+
+    <!-- Spectator Chaos Skill Bar -->
+    <div id="spec-bar" class="spec-bar hidden">
+      <span style="font-weight:800; color:#e9d5ff;">👀 觀戰搞事技能 (點擊地圖空投)：</span>
+      <button id="btn-spec-banana" class="btn btn-sm">🍌 空投香蕉皮</button>
+      <button id="btn-spec-smoke" class="btn btn-sm btn-blue">💨 空投煙霧彈</button>
+      <span id="spec-cd-txt" style="font-weight:800; color:#fde047;">就緒!</span>
+    </div>
+
+    <!-- Bottom HUD -->
+    <div class="hud-bottom">
+      <div id="slot-0" class="item-slot active">
+        <span style="font-size:1.5rem" id="slot-0-icon">➖</span>
+        <div>
+          <div style="font-weight:800; font-size:0.86rem" id="slot-0-name">空道具欄</div>
+          <div style="font-size:0.72rem; color:#94a3b8">Space / 左鍵使用</div>
+        </div>
+      </div>
+      <div id="slot-1" class="item-slot hidden">
+        <span style="font-size:1.5rem" id="slot-1-icon">➖</span>
+        <div>
+          <div style="font-weight:800; font-size:0.86rem" id="slot-1-name">道具欄 2</div>
+          <div style="font-size:0.72rem; color:#94a3b8">按 Q 切換</div>
+        </div>
+      </div>
+      <button id="btn-hud-dash" class="action-cd-btn">⚡ Shift 衝刺<br><span id="hud-dash-cd" style="color:#4ade80">就緒</span></button>
+      <div class="emote-bar">
+        <button class="emote-btn" data-emote="😂">😂</button>
+        <button class="emote-btn" data-emote="😱">😱</button>
+        <button class="emote-btn" data-emote="👍">👍</button>
+        <button class="emote-btn" data-emote="😡">😡</button>
+      </div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div id="mobile-controls" class="mobile-controls hidden">
+      <div id="joystick-zone" class="joystick-zone">
+        <div id="joystick-knob" class="joystick-knob"></div>
+      </div>
+      <div class="mobile-actions">
+        <button id="mob-dash" class="mob-btn" style="background:#38bdf8; color:#0f172a;">衝刺<br>Shift</button>
+        <button id="mob-item" class="mob-btn" style="background:#facc15; color:#0f172a;">道具<br>Use</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. POST-MATCH PODIUM SCREEN -->
+  <section id="screen-podium" class="screen hidden">
+    <div class="container">
+      <div class="card">
+        <div class="hero-header">
+          <h1 id="podium-title" class="hero-title">🏆 比賽結束！</h1>
+          <p id="podium-sub" class="hero-sub" style="font-size:1.1rem; color:#f8fafc; font-weight:700;"></p>
+        </div>
+
+        <h3>🏅 賽後趣味頒獎台</h3>
+        <div id="podium-awards" class="award-grid"></div>
+
+        <h3>📊 本局數據統計</h3>
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>玩家</th>
+              <th>最終身分</th>
+              <th>天賦</th>
+              <th>抓捕</th>
+              <th>被抓</th>
+              <th>道具使用</th>
+              <th>踩雷</th>
+            </tr>
+          </thead>
+          <tbody id="podium-stats"></tbody>
+        </table>
+
+        <div style="display:flex; gap:12px; margin-top:16px;">
+          <button id="btn-rematch" class="btn btn-green btn-lg">🔄 再戰一局</button>
+          <button id="btn-podium-home" class="btn btn-dark btn-lg">🏠 返回首頁</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CODEX / MAP JSON MODAL -->
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div class="card modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h2 id="modal-title" style="margin:0">🎁 22 種道具圖鑑</h2>
+        <button id="btn-modal-close" class="btn btn-dark btn-sm">✕ 關閉</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
