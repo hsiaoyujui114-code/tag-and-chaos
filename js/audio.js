@@ -151,6 +151,15 @@ class RetroAudio {
     this.tone(720, 0.05, 'sine', 0.05, 920, 0);
   }
 
+  playCountdown(go = false) {
+    if (go) {
+      this.tone(880, 0.14, 'square', 0.09, null, 0);
+      this.tone(1174, 0.22, 'square', 0.09, null, 0.08);
+    } else {
+      this.tone(440, 0.1, 'square', 0.07, null, 0);
+    }
+  }
+
   playHeartbeat(intensity = 0.5) {
     const v = 0.04 + intensity * 0.07;
     this.tone(72, 0.08, 'sine', v, 44, 0);

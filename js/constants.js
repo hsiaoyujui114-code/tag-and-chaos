@@ -1,10 +1,10 @@
 // 《代號：極限追逐》(Tag & Chaos) — Core Constants & Game Data
 
 export const TILE_SIZE = 48;
-export const MAP_COLS = 28;
-export const MAP_ROWS = 20;
-export const WORLD_W = MAP_COLS * TILE_SIZE; // 1344
-export const WORLD_H = MAP_ROWS * TILE_SIZE; // 960
+export const MAP_COLS = 44;
+export const MAP_ROWS = 32;
+export const WORLD_W = MAP_COLS * TILE_SIZE; // 2112
+export const WORLD_H = MAP_ROWS * TILE_SIZE; // 1536
 
 export const TILE = {
   FLOOR: 0,

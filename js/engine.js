@@ -62,6 +62,8 @@ export class GameEngine {
 
     this.localId = config.localId || 'p1';
     this.isHost = config.isHost !== false;
+    this.countdownTimer = 3.4; // 3 -> 2 -> 1 -> GO!
+    this._lastCdTick = 4;
     this.bannerMsg = '';
     this.bannerTimer = 0;
     this.nextEntityId = 1;
@@ -69,8 +71,8 @@ export class GameEngine {
     this.initWorldPoints();
     this.spawnPlayers(config.participants || []);
     this.initModeObjects();
-    // Spawn initial 3 item boxes immediately so arena feels lively
-    for (let i = 0; i < 3; i++) this.spawnRandomItemBox();
+    // Spawn initial 6 item boxes across the large map
+    for (let i = 0; i < 6; i++) this.spawnRandomItemBox();
   }
 
   uid() {
@@ -308,7 +310,7 @@ export class GameEngine {
   }
 
   spawnRandomItemBox(forcedPos = null) {
-    if (this.itemBoxes.length >= 16) return;
+    if (this.itemBoxes.length >= 22) return;
     let pos = forcedPos;
     if (!pos) {
       const candidates = this.itemSpawns.length > 0 ? this.itemSpawns : this.walkableTiles;
@@ -341,6 +343,17 @@ export class GameEngine {
   step(dt) {
     if (this.finished) return;
     const clampedDt = Math.min(dt, 0.05);
+
+    if (this.countdownTimer > 0) {
+      this.countdownTimer = Math.max(0, this.countdownTimer - clampedDt);
+      const ceilVal = Math.ceil(this.countdownTimer - 0.35);
+      if (this.isHost && ceilVal !== this._lastCdTick && ceilVal >= 0) {
+        this._lastCdTick = ceilVal;
+        audio.playCountdown(ceilVal === 0);
+      }
+      return;
+    }
+
     this.elapsed += clampedDt;
     this.timeLeft = Math.max(0, this.timeLeft - clampedDt);
 
@@ -1399,6 +1412,7 @@ export class GameEngine {
   // Compact state snapshot for Host -> Client P2P sync (25Hz)
   exportSnapshot() {
     return {
+      cd: Number(this.countdownTimer.toFixed(2)),
       t: Number(this.timeLeft.toFixed(2)),
       el: Number(this.elapsed.toFixed(2)),
       fin: this.finished,
@@ -1471,6 +1485,7 @@ export class GameEngine {
   }
 
   applySnapshot(snap) {
+    if (typeof snap.cd === 'number') this.countdownTimer = snap.cd;
     this.timeLeft = snap.t;
     this.elapsed = snap.el;
     this.finished = snap.fin;

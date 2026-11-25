@@ -1,29 +1,29 @@
 // 《代號：極限追逐》(Tag & Chaos) — Main Controller, UI, Input & Loop
 import {
-  COLORS, HATS, TRAILS, PERKS, MODES, ITEMS, ITEM_BY_ID, EMOTES,
-  TILE, TILE_SIZE, TILE_META, MAP_COLS, MAP_ROWS,
+  COLORS, PERKS, MODES, ITEMS, ITEM_BY_ID, EMOTES,
+  TILE, TILE_META, MAP_COLS, MAP_ROWS,
 } from './constants.js';
 import { BUILTIN_MAPS, cloneMap, createBlankCustomMap, exportMapJSON, importMapJSON } from './maps.js';
 import { GameEngine } from './engine.js';
-import { GameRenderer } from './renderer.js';
+import { GameRenderer, drawPixelCharacterSprite } from './renderer.js';
 import { P2PManager } from './net.js';
 import { audio } from './audio.js';
 
-// App State
+// App State (Pure character only — no hats or wearable accessories)
 const profile = {
   id: 'p-' + Math.random().toString(36).slice(2, 8),
-  name: '極限玩家',
+  name: '像素玩家',
   color: COLORS[1].hex,
   colorDark: COLORS[1].dark,
-  hat: 'crown',
-  trail: 'rainbow',
+  hat: 'none',
+  trail: 'none',
   perk: 'parkour',
   ready: true,
 };
 
 let customMap = null;
 let lobbyMode = 'single'; // 'single' | 'host' | 'client'
-let lobbyPeers = new Map(); // id -> profile
+let lobbyPeers = new Map();
 let engine = null;
 let renderer = null;
 let p2p = new P2PManager();
@@ -50,10 +50,9 @@ function showScreen(name) {
 }
 
 // ============================================================
-// 1. HOME & CUSTOMIZATION UI
+// 1. HOME & CHARACTER SELECTION (NO HATS / NO TRAILS)
 // ============================================================
 function initHomeUI() {
-  // Swatches
   const swWrap = $('color-swatches');
   COLORS.forEach((c) => {
     const btn = document.createElement('button');
@@ -70,36 +69,6 @@ function initHomeUI() {
     swWrap.appendChild(btn);
   });
 
-  // Hats
-  const hatWrap = $('hat-pills');
-  HATS.forEach((h) => {
-    const btn = document.createElement('button');
-    btn.className = 'pill' + (profile.hat === h.id ? ' active' : '');
-    btn.textContent = `${h.icon} ${h.name}`;
-    btn.onclick = () => {
-      profile.hat = h.id;
-      hatWrap.querySelectorAll('.pill').forEach((x) => x.classList.remove('active'));
-      btn.classList.add('active');
-      drawAvatarPreview();
-    };
-    hatWrap.appendChild(btn);
-  });
-
-  // Trails
-  const trWrap = $('trail-pills');
-  TRAILS.forEach((tr) => {
-    const btn = document.createElement('button');
-    btn.className = 'pill' + (profile.trail === tr.id ? ' active' : '');
-    btn.textContent = `${tr.icon} ${tr.name}`;
-    btn.onclick = () => {
-      profile.trail = tr.id;
-      trWrap.querySelectorAll('.pill').forEach((x) => x.classList.remove('active'));
-      btn.classList.add('active');
-    };
-    trWrap.appendChild(btn);
-  });
-
-  // Perks
   const pkWrap = $('perk-pills');
   const updatePerkDesc = () => {
     const p = PERKS.find((x) => x.id === profile.perk);
@@ -120,12 +89,11 @@ function initHomeUI() {
   updatePerkDesc();
 
   $('inp-name').oninput = (e) => {
-    profile.name = e.target.value.trim() || '極限玩家';
+    profile.name = e.target.value.trim() || '像素玩家';
   };
 
   drawAvatarPreview();
 
-  // Populate Lobby Selectors
   const selMode = $('sel-mode');
   MODES.forEach((m) => {
     const opt = document.createElement('option');
@@ -143,14 +111,13 @@ function initHomeUI() {
   refreshMapSelect();
 
   ['sel-map', 'sel-duration', 'sel-ai-count', 'sel-ai-diff', 'sel-myrole',
-   'chk-fog', 'chk-events', 'chk-poison', 'chk-rubber'].forEach((id) => {
+   'chk-events', 'chk-poison', 'chk-rubber'].forEach((id) => {
     $(id).onchange = () => {
       renderLobbyPlayers();
       syncLobbyToClients();
     };
   });
 
-  // Home Buttons
   $('btn-single').onclick = () => {
     lobbyMode = 'single';
     p2p.destroy();
@@ -220,40 +187,9 @@ function refreshMapSelect() {
 function drawAvatarPreview() {
   const c = $('avatar-preview');
   const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, c.width, c.height);
-  const cx = 38;
-  const cy = 44;
-  const r = 20;
-
-  ctx.fillStyle = profile.colorDark;
-  ctx.strokeStyle = '#111827';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(cx - 12, cy + 10, 9, 10, 4);
-  ctx.roundRect(cx + 3, cy + 10, 9, 10, 4);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = profile.color;
-  ctx.lineWidth = 3.5;
-  ctx.beginPath();
-  ctx.roundRect(cx - 17, cy - 20, 34, 34, 15);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = '#e0f2fe';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.roundRect(cx - 9, cy - 10, 20, 11, 6);
-  ctx.fill();
-  ctx.stroke();
-
-  if (profile.hat !== 'none') {
-    const map = { crown: '👑', cat: '🐱', shades: '🕶️', pirate: '🏴‍☠️', headband: '🎀' };
-    ctx.font = '20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(map[profile.hat] || '', cx, profile.hat === 'shades' ? cy + 2 : cy - 22);
-  }
+  drawPixelCharacterSprite(ctx, c.width / 2, c.height / 2 + 2, 4, profile.color, profile.colorDark, false, false, false, 0);
 }
 
 // ============================================================
@@ -271,7 +207,7 @@ function openLobbyUI() {
   $('wait-host-msg').classList.toggle('hidden', !isClient);
 
   const hostControls = ['sel-mode', 'sel-map', 'sel-duration', 'sel-ai-count', 'sel-ai-diff',
-    'chk-fog', 'chk-events', 'chk-poison', 'chk-rubber'];
+    'chk-events', 'chk-poison', 'chk-rubber'];
   hostControls.forEach((id) => { $(id).disabled = isClient; });
 
   renderLobbyPlayers();
@@ -291,7 +227,7 @@ function getLobbySettings() {
     aiCount: Number($('sel-ai-count').value),
     aiDiff: $('sel-ai-diff').value,
     myRole: $('sel-myrole').value,
-    enableFog: $('chk-fog').checked,
+    enableFog: true,
     enableEvents: $('chk-events').checked,
     enablePoison: $('chk-poison').checked,
     enableRubberband: $('chk-rubber').checked,
@@ -302,11 +238,10 @@ function buildParticipants(settings) {
   const humans = Array.from(lobbyPeers.values()).map((p, idx) => ({ ...p, isAI: false, idx }));
   const totalBots = settings.aiCount;
   const list = [...humans];
-  const botNames = ['呆萌機器人', '閃電俠AI', '草叢老六', '搗蛋鬼AI', '跑酷狂AI', '爆笑香蕉', '迷宮大師'];
+  const botNames = ['像素小兵', '閃電AI', '草叢忍者', '搗蛋方塊', '跑酷機器', '爆笑方魂', '迷宮行者'];
 
   for (let i = 0; i < totalBots; i++) {
     const c = COLORS[(i + 2) % COLORS.length];
-    const h = HATS[(i + 1) % HATS.length].id;
     const pk = PERKS[i % PERKS.length].id;
     list.push({
       id: `ai-${i + 1}`,
@@ -315,17 +250,15 @@ function buildParticipants(settings) {
       aiDiff: settings.aiDiff,
       color: c.hex,
       colorDark: c.dark,
-      hat: h,
+      hat: 'none',
       trail: 'none',
       perk: pk,
     });
   }
 
-  // Assign Chaser & Runners
   const chaserCount = list.length >= 6 ? 2 : 1;
   let assignedChasers = 0;
 
-  // Respect local player's chosen role if single or host
   const localIdx = list.findIndex((p) => p.id === profile.id);
   if (localIdx >= 0 && settings.myRole === 'chaser') {
     list[localIdx].role = 'chaser';
@@ -335,7 +268,6 @@ function buildParticipants(settings) {
   }
 
   const unassigned = list.filter((p) => !p.role);
-  // Prefer AI or random others to fill remaining chasers
   for (const p of unassigned) {
     if (assignedChasers < chaserCount && (p.isAI || settings.myRole === 'auto')) {
       p.role = 'chaser';
@@ -394,7 +326,6 @@ function syncLobbyToClients() {
         duration: s.duration,
         aiCount: s.aiCount,
         aiDiff: s.aiDiff,
-        enableFog: s.enableFog,
         enableEvents: s.enableEvents,
         enablePoison: s.enablePoison,
         enableRubberband: s.enableRubberband,
@@ -403,7 +334,6 @@ function syncLobbyToClients() {
   });
 }
 
-// Wire P2P callbacks
 p2p.onStatus = (msg) => { $('net-status').textContent = msg; };
 p2p.onError = (err) => {
   $('net-status').textContent = err;
@@ -429,7 +359,6 @@ p2p.onLobbyUpdate = (ev) => {
     $('sel-duration').value = String(st.duration);
     $('sel-ai-count').value = String(st.aiCount);
     $('sel-ai-diff').value = st.aiDiff;
-    $('chk-fog').checked = st.enableFog;
     $('chk-events').checked = st.enableEvents;
     $('chk-poison').checked = st.enablePoison;
     $('chk-rubber').checked = st.enableRubberband;
@@ -468,7 +397,7 @@ $('btn-copy-link').onclick = async () => {
   const url = `${location.origin}${location.pathname}?room=${p2p.roomCode}`;
   try {
     await navigator.clipboard.writeText(url);
-    $('btn-copy-link').textContent = '✅ 已複製邀請連結!';
+    $('btn-copy-link').textContent = '✅ 已複製!';
     setTimeout(() => { $('btn-copy-link').textContent = '📋 複製邀請連結'; }, 2000);
   } catch {
     prompt('請複製以下邀請連結給朋友：', url);
@@ -486,7 +415,7 @@ $('btn-start-match').onclick = () => {
 };
 
 // ============================================================
-// 3. MAP EDITOR
+// 3. MAP EDITOR (44x32)
 // ============================================================
 let editorMap = createBlankCustomMap();
 let selectedTile = TILE.WALL;
@@ -513,8 +442,9 @@ function initEditor() {
 function drawEditorCanvas() {
   const c = $('editor-canvas');
   const ctx = c.getContext('2d');
-  const cw = c.width / MAP_COLS; // 32
-  const ch = c.height / MAP_ROWS; // 32
+  ctx.imageSmoothingEnabled = false;
+  const cw = c.width / MAP_COLS;
+  const ch = c.height / MAP_ROWS;
 
   for (let y = 0; y < MAP_ROWS; y++) {
     for (let x = 0; x < MAP_COLS; x++) {
@@ -522,10 +452,10 @@ function drawEditorCanvas() {
       const meta = TILE_META.find((m) => m.id === tid) || TILE_META[0];
       ctx.fillStyle = meta.color;
       ctx.fillRect(x * cw, y * ch, cw, ch);
-      ctx.strokeStyle = 'rgba(15,23,42,0.22)';
+      ctx.strokeStyle = 'rgba(15,23,42,0.28)';
       ctx.strokeRect(x * cw, y * ch, cw, ch);
       if (tid !== TILE.FLOOR) {
-        ctx.font = '16px sans-serif';
+        ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(meta.icon, (x + 0.5) * cw, (y + 0.5) * ch);
@@ -539,7 +469,7 @@ function paintEditorCell(clientX, clientY, erase = false) {
   const rect = c.getBoundingClientRect();
   const tx = Math.floor(((clientX - rect.left) / rect.width) * MAP_COLS);
   const ty = Math.floor(((clientY - rect.top) / rect.height) * MAP_ROWS);
-  if (tx <= 0 || ty <= 0 || tx >= MAP_COLS - 1 || ty >= MAP_ROWS - 1) return; // keep outer border walls
+  if (tx <= 0 || ty <= 0 || tx >= MAP_COLS - 1 || ty >= MAP_ROWS - 1) return;
   editorMap.grid[ty][tx] = erase ? TILE.FLOOR : selectedTile;
   drawEditorCanvas();
 }
@@ -604,7 +534,7 @@ $('btn-ed-apply').onclick = () => {
 };
 
 // ============================================================
-// 4. CODEX MODAL (22 Items + 5 Perks + 5 Modes)
+// 4. CODEX MODAL
 // ============================================================
 function openCodexModal() {
   $('modal-title').textContent = '🎁 全 22 種隨機道具 & 遊戲圖鑑';
@@ -622,7 +552,7 @@ function openCodexModal() {
 }
 
 // ============================================================
-// 5. GAME SESSION, LOOP, CONTROLS & HUD
+// 5. GAME SESSION, COUNTDOWN, MINIMAP & LOOP
 // ============================================================
 function startGameSession(config, isHost) {
   if (rafId) cancelAnimationFrame(rafId);
@@ -650,7 +580,6 @@ function gameLoop(ts) {
   const dt = Math.min(0.05, (ts - lastTs) / 1000);
   lastTs = ts;
 
-  // Gather local input
   const inp = collectLocalInput();
   if (engine.isHost) {
     engine.setPlayerInput(profile.id, inp);
@@ -658,7 +587,7 @@ function gameLoop(ts) {
 
     if (lobbyMode === 'host') {
       netSnapAccum += dt;
-      if (netSnapAccum >= 0.04) { // 25Hz snapshot broadcast
+      if (netSnapAccum >= 0.04) {
         netSnapAccum = 0;
         p2p.broadcast({ type: 'snap', snap: engine.exportSnapshot() });
       }
@@ -673,6 +602,7 @@ function gameLoop(ts) {
   }
 
   renderer.render(engine, dt, specSkillMode);
+  renderer.renderMinimap(engine, $('minimap-canvas'));
   updateGameHUD(dt);
 
   if (engine.finished) {
@@ -707,6 +637,22 @@ function collectLocalInput() {
 let hbTimer = 0;
 function updateGameHUD(dt) {
   const local = engine.players.find((p) => p.id === engine.localId);
+
+  // Pre-match Countdown Overlay
+  const cdWrap = $('countdown-overlay');
+  if (engine.countdownTimer > 0) {
+    cdWrap.classList.remove('hidden');
+    const n = Math.ceil(engine.countdownTimer - 0.35);
+    $('countdown-num').textContent = n > 0 ? String(n) : 'GO!';
+    if (local) {
+      $('countdown-role').textContent = local.role === 'chaser'
+        ? '👹 你是【追逐者】！倒數結束後抓光所有人！'
+        : '🏃 你是【逃跑者】！快看右上小地圖準備逃命！';
+    }
+  } else {
+    cdWrap.classList.add('hidden');
+  }
+
   const secs = Math.ceil(engine.timeLeft);
   const mm = String(Math.floor(secs / 60)).padStart(2, '0');
   const ss = String(secs % 60).padStart(2, '0');
@@ -726,7 +672,6 @@ function updateGameHUD(dt) {
     $('hud-mode-extra').textContent = '';
   }
 
-  // Banner
   if (engine.bannerTimer > 0 && engine.bannerMsg) {
     $('hud-banner').textContent = engine.bannerMsg;
     $('hud-banner').classList.remove('hidden');
@@ -740,8 +685,7 @@ function updateGameHUD(dt) {
     : local.caged ? '⛓️ 牢籠待援'
     : local.role === 'chaser' ? '👹 追逐者' : '🏃 逃跑者';
 
-  // Heartbeat audio when chaser gets close to local runner
-  if (local.role === 'runner' && !local.caught && !local.caged) {
+  if (local.role === 'runner' && !local.caught && !local.caged && engine.countdownTimer <= 0) {
     let minD = Infinity;
     for (const o of engine.players) {
       if (o.role === 'chaser' && !o.caught) {
@@ -759,7 +703,6 @@ function updateGameHUD(dt) {
     }
   }
 
-  // Item slots
   const s0 = local.items[0] ? ITEM_BY_ID[local.items[0]] : null;
   $('slot-0-icon').textContent = s0 ? s0.icon : '➖';
   $('slot-0-name').textContent = s0 ? s0.name : '空道具欄';
@@ -774,11 +717,9 @@ function updateGameHUD(dt) {
     $('slot-1').classList.toggle('active', local.activeSlot === 1);
   }
 
-  // Dash cooldown
   $('hud-dash-cd').textContent = local.dashCooldown > 0 ? `${local.dashCooldown.toFixed(1)}s` : '就緒!';
   $('hud-dash-cd').style.color = local.dashCooldown > 0 ? '#f87171' : '#4ade80';
 
-  // Spectator bar
   $('spec-bar').classList.toggle('hidden', !local.caught);
   if (local.caught) {
     $('spec-cd-txt').textContent = local.specCooldown > 0 ? `冷卻 ${local.specCooldown.toFixed(1)}s` : '就緒! 點地圖空投';
@@ -818,7 +759,7 @@ function showPodium() {
 }
 
 // ============================================================
-// 6. KEYBOARD, MOUSE, TOUCH & HUD BUTTON EVENTS
+// 6. KEYBOARD, MOUSE, TOUCH & HUD EVENTS
 // ============================================================
 window.addEventListener('keydown', (e) => {
   if ($('screen-game').classList.contains('hidden')) return;
@@ -947,9 +888,7 @@ $('btn-podium-home').onclick = () => {
   $('mob-item').onclick = (e) => { e.stopPropagation(); pendingEvents.useItem = true; };
 })();
 
-// ============================================================
-// 7. BOOTSTRAP & AUTO-JOIN URL ?room=TAG-XXXX
-// ============================================================
+// Bootstrap
 initHomeUI();
 const params = new URLSearchParams(location.search);
 const urlRoom = params.get('room');

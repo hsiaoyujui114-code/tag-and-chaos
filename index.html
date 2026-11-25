@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>《代號：極限追逐》Tag & Chaos — Q版派對追逐遊戲</title>
+  <title>《代號：極限追逐》Tag & Chaos — 像素派對追逐遊戲</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <!-- PeerJS for zero-server WebRTC P2P multiplayer on GitHub Pages -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
@@ -14,30 +17,24 @@
   <section id="screen-home" class="screen">
     <div class="container">
       <div class="hero-header">
-        <h1 class="hero-title">🏃‍♂️💨 《代號：極限追逐》 Tag &amp; Chaos</h1>
-        <p class="hero-sub">2D Q版幾何派對追逐｜22種爆笑道具 × 5大職業天賦 × 5種遊戲模式 × WebRTC 免伺服器 P2P 連線</p>
+        <h1 class="hero-title">👾 《代號：極限追逐》 TAG &amp; CHAOS</h1>
+        <p class="hero-sub">8-BIT 像素風局部視野派對追逐｜44×32 大地圖 × 太空狼人殺視角 × 右上小地圖 × WebRTC P2P</p>
       </div>
 
       <div class="grid-2">
-        <!-- Left: Character & Perk Customization -->
+        <!-- Left: Character & Perk Selection ONLY (No hats/accessories) -->
         <div class="card">
-          <h2>🎨 角色造型與天賦</h2>
+          <h2>👾 選擇角色與天賦</h2>
           <div class="avatar-preview-wrap">
-            <canvas id="avatar-preview" width="76" height="76"></canvas>
+            <canvas id="avatar-preview" width="72" height="72"></canvas>
             <div style="flex:1">
               <label class="field-label" style="margin-top:0">玩家暱稱</label>
-              <input id="inp-name" type="text" maxlength="12" value="極限玩家" placeholder="輸入你的暱稱" />
+              <input id="inp-name" type="text" maxlength="12" value="像素玩家" placeholder="輸入你的暱稱" />
             </div>
           </div>
 
-          <label class="field-label">角色顏色</label>
+          <label class="field-label">角色外觀顏色（純角色，無任何配戴飾品）</label>
           <div id="color-swatches" class="swatch-row"></div>
-
-          <label class="field-label">可愛頭飾</label>
-          <div id="hat-pills" class="pill-row"></div>
-
-          <label class="field-label">移動殘影</label>
-          <div id="trail-pills" class="pill-row"></div>
 
           <label class="field-label">選擇職業天賦 (開局被動)</label>
           <div id="perk-pills" class="pill-row"></div>
@@ -46,7 +43,7 @@
 
         <!-- Right: Play Modes & P2P Entry -->
         <div class="card action-stack">
-          <h2>🎮 開始遊玩</h2>
+          <h2>🕹️ 開始遊戲</h2>
           <button id="btn-single" class="btn btn-lg">🤖 單人模式 vs 電腦 AI</button>
           <button id="btn-host" class="btn btn-blue btn-lg">🌐 建立 P2P 多人房間（免伺服器）</button>
 
@@ -58,14 +55,14 @@
 
           <div style="display:flex; gap:10px; margin-top:6px">
             <button id="btn-editor" class="btn btn-purple" style="flex:1">🛠 地圖編輯器</button>
-            <button id="btn-codex" class="btn btn-dark" style="flex:1">🎁 道具與規則圖鑑</button>
+            <button id="btn-codex" class="btn btn-dark" style="flex:1">🎁 22種道具圖鑑</button>
           </div>
 
-          <div style="margin-top:8px; font-size:0.84rem; color:#94a3b8; line-height:1.55;">
-            <b>操作說明：</b><br>
-            • 移動：<kbd>WASD</kbd> 或 <kbd>方向鍵</kbd>（手機支援左下虛擬搖桿）<br>
-            • 使用道具：<kbd>空白鍵</kbd> 或 <kbd>滑鼠左鍵</kbd>（道具狂按 <kbd>Q</kbd> 切換）<br>
-            • 專屬衝刺／猛撲：<kbd>Shift</kbd>（冷卻 5 秒）｜表情：<kbd>1~4</kbd>
+          <div style="margin-top:8px; font-size:0.84rem; color:#cbd5e1; line-height:1.6;">
+            <b>玩法特色與操作：</b><br>
+            • 主畫面僅能看見角色附近與視線所及的路線，牆後與遠方一片漆黑！<br>
+            • 移動：<kbd>WASD</kbd>／<kbd>方向鍵</kbd>｜使用道具：<kbd>Space</kbd>／<kbd>左鍵</kbd>（道具狂按 <kbd>Q</kbd> 切換）<br>
+            • 衝刺／猛撲：<kbd>Shift</kbd>｜表情：<kbd>1~4</kbd>｜右上角小地圖可看全圖與隊友！
           </div>
         </div>
       </div>
@@ -89,13 +86,12 @@
         </div>
 
         <div class="grid-2">
-          <!-- Match Rules -->
           <div>
             <label class="field-label" style="margin-top:0">遊戲模式 (5 種玩法)</label>
             <select id="sel-mode"></select>
             <div id="mode-desc" class="perk-desc-box" style="margin-bottom:8px"></div>
 
-            <label class="field-label">選擇地圖</label>
+            <label class="field-label">選擇大型地圖 (44×32)</label>
             <select id="sel-map"></select>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -138,14 +134,13 @@
             </div>
 
             <div class="toggle-grid">
-              <label class="toggle-item"><input id="chk-fog" type="checkbox" checked /> 🔦 視野迷霧</label>
+              <label class="toggle-item"><input id="chk-fog" type="checkbox" checked disabled /> 🔦 狼人殺局部視野</label>
               <label class="toggle-item"><input id="chk-events" type="checkbox" checked /> ⚡ 全場突發事件</label>
               <label class="toggle-item"><input id="chk-poison" type="checkbox" checked /> ☠️ 最後30秒毒圈</label>
               <label class="toggle-item"><input id="chk-rubber" type="checkbox" checked /> 🎁 橡皮筋道具</label>
             </div>
           </div>
 
-          <!-- Participants Roster -->
           <div style="display:flex; flex-direction:column; justify-content:space-between;">
             <div>
               <h3>👥 參賽名單</h3>
@@ -153,7 +148,7 @@
             </div>
 
             <div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">
-              <button id="btn-start-match" class="btn btn-green btn-lg">🚀 立即開戰！</button>
+              <button id="btn-start-match" class="btn btn-green btn-lg">🚀 立即開戰（3秒倒數）</button>
               <div id="wait-host-msg" class="hidden" style="text-align:center; color:#fde047; font-weight:700;">⏳ 等待房主開始遊戲...</div>
             </div>
           </div>
@@ -169,7 +164,7 @@
         <div class="lobby-top">
           <div style="display:flex; align-items:center; gap:10px;">
             <button id="btn-ed-back" class="btn btn-dark btn-sm">← 返回</button>
-            <h2 style="margin:0">🛠 簡易地圖編輯器</h2>
+            <h2 style="margin:0">🛠 像素地圖編輯器 (44×32)</h2>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button id="btn-ed-clear" class="btn btn-dark btn-sm">🧹 清空地板</button>
@@ -182,7 +177,7 @@
         <div class="editor-layout">
           <div>
             <label class="field-label" style="margin-top:0">地圖名稱</label>
-            <input id="ed-name" type="text" value="我的自訂迷宮" maxlength="24" />
+            <input id="ed-name" type="text" value="我的像素大迷宮" maxlength="24" />
             <label class="field-label">視覺主題</label>
             <select id="ed-theme">
               <option value="office">🏢 辦公室／校園</option>
@@ -190,13 +185,13 @@
               <option value="factory">🏭 輸送帶工廠</option>
             </select>
             <label class="toggle-item" style="margin-top:8px">
-              <input id="ed-gates" type="checkbox" /> 🚪 電動閘門定時自動開關
+              <input id="ed-gates" type="checkbox" /> 🚪 電動閘門定時開關
             </label>
             <label class="field-label">點擊或拖曳塗鴉磚塊（右鍵擦除）</label>
             <div id="ed-palette" class="tile-palette"></div>
           </div>
           <div>
-            <canvas id="editor-canvas" width="896" height="640"></canvas>
+            <canvas id="editor-canvas" width="880" height="640"></canvas>
           </div>
         </div>
       </div>
@@ -207,7 +202,13 @@
   <section id="screen-game" class="screen hidden">
     <canvas id="game-canvas"></canvas>
 
-    <!-- Top HUD -->
+    <!-- Pre-match 3-2-1-GO Countdown -->
+    <div id="countdown-overlay" class="countdown-overlay hidden">
+      <div id="countdown-num" class="countdown-num">3</div>
+      <div id="countdown-role" class="countdown-sub">準備開追！</div>
+    </div>
+
+    <!-- Top-Left & Center HUD -->
     <div class="hud-top">
       <div class="hud-pill">
         <span id="hud-role-badge">🏃 逃跑者</span>
@@ -224,13 +225,19 @@
       </div>
     </div>
 
+    <!-- Top-Right Minimap (Among Us style) -->
+    <div id="minimap-box" class="minimap-box">
+      <canvas id="minimap-canvas" width="220" height="160"></canvas>
+      <div class="minimap-legend">🟨自己 ｜ 🟦隊友 ｜ 全圖格局</div>
+    </div>
+
     <div id="hud-banner" class="hud-banner hidden"></div>
 
     <!-- Spectator Chaos Skill Bar -->
     <div id="spec-bar" class="spec-bar hidden">
-      <span style="font-weight:800; color:#e9d5ff;">👀 觀戰搞事技能 (點擊地圖空投)：</span>
-      <button id="btn-spec-banana" class="btn btn-sm">🍌 空投香蕉皮</button>
-      <button id="btn-spec-smoke" class="btn btn-sm btn-blue">💨 空投煙霧彈</button>
+      <span style="font-weight:800; color:#e9d5ff;">👀 觀戰搞事 (點擊地圖空投)：</span>
+      <button id="btn-spec-banana" class="btn btn-sm">🍌 香蕉皮</button>
+      <button id="btn-spec-smoke" class="btn btn-sm btn-blue">💨 煙霧彈</button>
       <span id="spec-cd-txt" style="font-weight:800; color:#fde047;">就緒!</span>
     </div>
 
@@ -265,8 +272,8 @@
         <div id="joystick-knob" class="joystick-knob"></div>
       </div>
       <div class="mobile-actions">
-        <button id="mob-dash" class="mob-btn" style="background:#38bdf8; color:#0f172a;">衝刺<br>Shift</button>
-        <button id="mob-item" class="mob-btn" style="background:#facc15; color:#0f172a;">道具<br>Use</button>
+        <button id="mob-dash" class="mob-btn" style="background:#38bdf8; color:#090d16;">衝刺<br>Shift</button>
+        <button id="mob-item" class="mob-btn" style="background:#facc15; color:#090d16;">道具<br>Use</button>
       </div>
     </div>
   </section>

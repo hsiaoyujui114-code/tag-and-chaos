@@ -39,7 +39,7 @@ export function findNextDir(engine, sx, sy, gx, gy, canJump = false) {
   let bestDist = 1e9;
   let steps = 0;
 
-  while (open.length > 0 && steps < 280) {
+  while (open.length > 0 && steps < 480) {
     steps++;
     let minPos = 0;
     for (let i = 1; i < open.length; i++) {
